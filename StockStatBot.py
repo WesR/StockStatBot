@@ -7,6 +7,7 @@ client = discord.Client()
 url = "https://cloud-sse.iexapis.com/stable" # prod
 url_iea = "https://api.eia.gov/" # U.S. Energy Information Administration
 
+#Where we store the API keys
 class globalVars:
     def __init__(self, apiKeys = dict()):
         self.apiKeys = apiKeys
@@ -17,13 +18,16 @@ def loadKeys():
         globalVars.apiKeys = json.load(data)
     print("Loaded API keys")
 
+#Using requests to get json from IEX
 def httpGETJSON(endpoint = "", query = ""):
     return requests.get(url + endpoint + "?token=" + globalVars.apiKeys["iex"] + query).json() 
     #return json.loads('{"YELP":{"bids":[{"price":63.09,"size":300,"timestamp":1494538496261}],"asks":[{"price":63.92,"size":300,"timestamp":1494538381896},{"price":63.97,"size":300,"timestamp":1494538381885}]}}')
 
+#get json from IEA
 def httpGETJSON_iea(endpoint = "", query = ""):
     return requests.get(url_iea + endpoint + "?api_key=" + globalVars.apiKeys["iea"] + query).json() 
 
+#Get the outstanding orders on the book for a given stock or index
 def getBook(ticker):
     resp = httpGETJSON("/deep/book", "&symbols=" + ticker)
     
@@ -41,6 +45,7 @@ def getBook(ticker):
     #print(output)
     return output
 
+#Get the current commoditie (oil, corn, etc) price
 def getCommoditiesDaily(ticker):
     resp = httpGETJSON_iea("/series/", "&series_id=" + ticker)
     #resp = httpGETJSON("/time-series/energy/"+ ticker)[0]
@@ -51,6 +56,7 @@ def getCommoditiesDaily(ticker):
     return output
     #return 'Oil is ' + str(resp['value']) + ' as of ' + datetime.utcfromtimestamp(resp['updated']/1000).strftime('%H:%M:%S')
 
+#halp
 def help():
     message = "Commands:\n"
     message+= "```+book <ticker>\n"
@@ -63,15 +69,17 @@ def help():
 
 @client.event
 async def on_ready():
-    print("Online")
-    await client.change_presence(activity=discord.Game(name='Running Numbers'))
+    print("Online") #so we know client side
+    await client.change_presence(activity=discord.Game(name='Running Numbers'))#so the server knows whats up
 
+
+#The way I do commands is nonridged and allows for cool chaining. This does require some thought on when you run specific thing though
 @client.event
 async def on_message(message):
     #print(message.content)
-    if message.content.startswith('<@!' + str(client.user.id) + ">") or message.content.startswith('<@' + str(client.user.id) + ">"):
-        message.channel.typing()
-        if message.content.startswith('<@!' + str(client.user.id) + ">"):
+    if message.content.startswith('<@!' + str(client.user.id) + ">") or message.content.startswith('<@' + str(client.user.id) + ">"):#So we get with and without the ! (because we want without autocomplete)
+        message.channel.typing()# this doesnt work. I'll eventually put the good code from another bot here
+        if message.content.startswith('<@!' + str(client.user.id) + ">"):#we gotta split diffrently because of the bang
             command = message.content.split('<@!' + str(client.user.id) + ">")[1].strip().rstrip().lower()
         else:
             command = message.content.split('<@' + str(client.user.id) + ">")[1].strip().rstrip().lower()
@@ -88,7 +96,7 @@ async def on_message(message):
             else:
                 print("oil future price")
                 await message.channel.send(getCommoditiesDaily('PET.RCLC1.D'))
-        if ' gas' in " " + command:
+        if ' gas' in " " + command:#We add the space so we dont get natural gas. Its kinda a cheap trick
             if 'future' in command:
                 print("gas reformulated future price")#note, out api doesnt have futures for regular
                 await message.channel.send(getCommoditiesDaily('PET.EER_EPMRR_PE1_Y35NY_DPG.D'))
